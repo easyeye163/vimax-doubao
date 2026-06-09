@@ -28,15 +28,22 @@ class VideoGeneratorDoubaoAPI:
         10: {"duration": 10},
     }
 
+    # Fallback models when primary model fails (e.g., insufficient balance)
+    FALLBACK_MODELS = [
+        "doubao-seedance-1-0-pro-fast-251015",
+    ]
+
     def __init__(
         self,
         api_key: str,
         model: str = "doubao-seedance-1-5-pro-251215",
         base_url: str = "https://ark.cn-beijing.volces.com/api/v3",
-        default_duration: int = 5,
+        default_duration: int = 10,
+        fallback_models: Optional[List[str]] = None,
     ):
         self.api_key = api_key
         self.model = model
+        self.fallback_models = fallback_models or self.FALLBACK_MODELS
         self.base_url = base_url.rstrip("/")
         self.task_url = f"{self.base_url}/contents/generations/tasks"
         self.default_duration = default_duration
@@ -74,19 +81,29 @@ class VideoGeneratorDoubaoAPI:
 
         return content
 
-    def _submit_task(self, content: list) -> str:
+    def _submit_task(self, content: list, model: Optional[str] = None) -> str:
         """Submit a video generation task and return the task ID."""
+        use_model = model or self.model
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
         payload = {
-            "model": self.model,
+            "model": use_model,
             "content": content,
         }
 
-        logger.info(f"Submitting video task with model={self.model}")
+        logger.info(f"Submitting video task with model={use_model}")
         resp = requests.post(self.task_url, headers=headers, json=payload, timeout=120)
+
+        # Check for known errors that warrant fallback
+        if resp.status_code >= 400:
+            error_data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+            error_msg = error_data.get("error", {}).get("message", "")
+            error_code = error_data.get("error", {}).get("code", "")
+            logger.warning(f"Submit failed: code={error_code}, msg={error_msg}")
+            raise RuntimeError(f"Submit failed ({error_code}): {error_msg}")
+
         resp.raise_for_status()
         data = resp.json()
 
@@ -94,7 +111,7 @@ class VideoGeneratorDoubaoAPI:
         if not task_id:
             raise ValueError(f"No task ID in response: {json.dumps(data, ensure_ascii=False)[:500]}")
 
-        logger.info(f"Task submitted: id={task_id}")
+        logger.info(f"Task submitted: id={task_id}, model={use_model}")
         return task_id
 
     def _poll_task(self, task_id: str, poll_interval: int = 15, timeout: int = 900) -> dict:
@@ -198,12 +215,32 @@ class VideoGeneratorDoubaoAPI:
             seed=seed,
         )
 
-        # Submit and poll
-        task_id = self._submit_task(content)
-        task_result = self._poll_task(task_id)
+        # Submit and poll with model fallback
+        models_to_try = [self.model] + self.fallback_models
+        last_error = None
 
-        # Extract video URL
-        video_url = self._extract_video_url(task_result)
-        logger.info(f"Video generated: {video_url[:100]}...")
+        for idx, try_model in enumerate(models_to_try):
+            try:
+                logger.info(f"Trying model: {try_model} ({idx+1}/{len(models_to_try)})")
+                task_id = self._submit_task(content, model=try_model)
+                task_result = self._poll_task(task_id)
 
-        return VideoOutput(fmt="url", ext="mp4", data=video_url)
+                # Extract video URL
+                video_url = self._extract_video_url(task_result)
+                logger.info(f"Video generated with {try_model}: {video_url[:100]}...")
+
+                return VideoOutput(fmt="url", ext="mp4", data=video_url)
+
+            except RuntimeError as e:
+                last_error = e
+                # If it's a balance/quota error, try fallback model
+                error_str = str(e).lower()
+                if any(kw in error_str for kw in ("balance", "quota", "insufficient", "limit", "resource")):
+                    logger.warning(f"Model {try_model} hit resource limit, falling back...")
+                    continue
+                else:
+                    # Non-recoverable error, don't fallback
+                    raise
+
+        # All models failed
+        raise RuntimeError(f"All models failed. Last error: {last_error}")
