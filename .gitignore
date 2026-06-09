@@ -1,0 +1,6 @@
+.working_dir/
+__pycache__/
+*.pyc
+.env
+.idea/
+.vscode/

@@ -1,0 +1,20 @@
+api_key: ${DOUBAO_API_KEY}
+base_url: https://ark.cn-beijing.volces.com/api/v3
+
+chat_model:
+  init_args:
+    model: doubao-1-5-pro-32k
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+
+image_generator:
+  class_path: tools.ImageGeneratorDoubaoAPI
+  init_args:
+    model: doubao-seedream-3-0-t2i-250415
+
+video_generator:
+  class_path: tools.VideoGeneratorDoubaoAPI
+  init_args:
+    model: doubao-seedance-1-5-pro-251215
+    default_duration: 5
+
+working_dir: .working_dir/idea2video
