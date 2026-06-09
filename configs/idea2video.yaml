@@ -9,12 +9,12 @@ chat_model:
 image_generator:
   class_path: tools.ImageGeneratorDoubaoAPI
   init_args:
-    model: doubao-seedream-3-0-t2i-250415
+    model: doubao-seedream-5-0-260128
 
 video_generator:
   class_path: tools.VideoGeneratorDoubaoAPI
   init_args:
     model: doubao-seedance-1-5-pro-251215
-    default_duration: 5
+    default_duration: 10
 
 working_dir: .working_dir/idea2video

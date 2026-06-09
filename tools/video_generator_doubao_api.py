@@ -134,22 +134,27 @@ class VideoGeneratorDoubaoAPI:
         raise TimeoutError(f"Task {task_id} timed out after {timeout}s")
 
     def _extract_video_url(self, task_result: dict) -> str:
-        """Extract the video URL from a completed task result."""
-        # Doubao returns video content in the content array
-        content = task_result.get("content", [])
-        for item in content:
-            if item.get("type") == "video_url" or item.get("type") == "video":
-                video_url = item.get("video_url", {}).get("url", "")
-                if not video_url:
-                    video_url = item.get("url", "")
-                if video_url:
-                    return video_url
+        """Extract the video URL from a completed task result.
 
-        # Try alternative response formats
-        if "output" in task_result:
-            output = task_result["output"]
-            if isinstance(output, dict) and "video_url" in output:
-                return output["video_url"]
+        Doubao Seedance API returns content as a dict with video_url field,
+        NOT as a list of typed items.
+        """
+        content = task_result.get("content", {})
+
+        # Primary format: content is a dict with "video_url" key
+        if isinstance(content, dict):
+            video_url = content.get("video_url", "")
+            if video_url:
+                return video_url
+
+        # Fallback: content as list of typed items
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") in ("video_url", "video"):
+                        url = item.get("video_url", {}).get("url", "") or item.get("url", "")
+                        if url:
+                            return url
 
         raise ValueError(f"Cannot extract video URL from task result: {json.dumps(task_result, ensure_ascii=False)[:500]}")
 
