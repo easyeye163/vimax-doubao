@@ -5,6 +5,8 @@
   <i>Powered by ByteDance Doubao Seedance (豆包即梦)</i>
 </p>
 
+> **Demo Video**: [baby_physics_50s.mp4 (53.7MB)](https://github.com/easyeye163/vimax-doubao/releases/download/v1.0.0/baby_physics_50s.mp4) — A cute baby exploring physics: gravity, inertia, magnetism, buoyancy, and light spectrum.
+
 ## Overview
 
 ViMax-Doubao is a lightweight adaptation of [ViMax](https://github.com/HKUDS/ViMax) that replaces Google Veo/Gemini with **ByteDance Doubao Seedance API** for agentic video generation.
@@ -125,6 +127,7 @@ vimax-doubao/
 │   └── video.py                  # Video download helpers
 ├── main_idea2video.py           # Entry point
 ├── run_full_pipeline.py         # Full standalone pipeline script
+├── run_baby_physics.py          # Baby physics demo (5 scenes)
 └── requirements.txt
 ```
 
@@ -148,15 +151,36 @@ vimax-doubao/
 | `video_width` | Output video width | 768 |
 | `video_height` | Output video height | 1152 |
 
+## Demo
+
+### 🎬 可爱宝宝学物理 (Baby Physics)
+
+5 scenes × 10s = **50s video**, generated entirely by vimax-doubao pipeline:
+
+| Scene | Topic | Description |
+|-------|-------|-------------|
+| 1 | 🧱 重力 (Gravity) | Baby stacks blocks, tower collapses |
+| 2 | ⚽ 惯性 (Inertia) | Ball rolls down a ramp |
+| 3 | 🧲 磁力 (Magnetism) | Magnet attracts metal toys |
+| 4 | 💧 浮力 (Buoyancy) | Objects float and sink in water |
+| 5 | 🌈 光谱 (Light) | Prism creates rainbow |
+
+📥 **Download**: [baby_physics_50s.mp4](https://github.com/easyeye163/vimax-doubao/releases/download/v1.0.0/baby_physics_50s.mp4) (53.7MB, 50.4s)
+
+Generated with:
+- **Image**: Doubao Seedream 5.0 (character reference)
+- **Video**: Doubao Seedance 1.5 Pro (5 parallel i2v tasks)
+- **Chaining**: ti2vid mode with last-frame extraction
+
 ## Differences from vimax-agnes
 
 | Feature | vimax-agnes | vimax-doubao |
 |---------|-------------|--------------|
 | LLM | Agnes 2.0 Flash | Doubao 1.5 Pro 32K |
-| Image Gen | Agnes Image 2.1 Flash | Doubao Seedream 3.0 |
+| Image Gen | Agnes Image 2.1 Flash | Doubao Seedream 5.0 |
 | Video Gen | Agnes Video v2.0 | Doubao Seedance 1.5 Pro |
-| Video API | REST + polling | REST + polling |
-| Max Duration | 10s | 10s |
+| Video API | REST + polling (sync content) | REST + polling (async task + dict response) |
+| Max Duration | 10s | 10s per clip, unlimited scenes |
 | Chaining | ti2vid / keyframes | ti2vid |
 | API Base | apihub.agnes-ai.com | ark.cn-beijing.volces.com |
 
